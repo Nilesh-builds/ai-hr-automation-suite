@@ -1,0 +1,272 @@
+{
+  "name": "AI Resume Screener",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resume-upload",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-1111-1111-111111111111",
+      "name": "Resume Upload Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "resume-webhook-id"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "id": "a1b2c3d4-2222-2222-2222-222222222222",
+      "name": "Extract PDF Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "type": "system",
+              "content": "You are an expert HR recruiter. Analyze the resume and extract the following information in JSON format:\n\n{\n  \"candidateName\": \"Full Name\",\n  \"email\": \"email@example.com\",\n  \"phone\": \"phone number\",\n  \"totalExperience\": \"X years\",\n  \"skills\": [\"skill1\", \"skill2\"],\n  \"education\": \"Highest Degree\",\n  \"currentCompany\": \"Company Name\",\n  \"currentRole\": \"Job Title\",\n  \"score\": 75,\n  \"scoreBreakdown\": {\n    \"experience\": 30,\n    \"skills\": 25,\n    \"education\": 10,\n    \"careerProgression\": 10\n  },\n  \"summary\": \"Brief 2-line summary\"\n}\n\nScoring criteria (total 100):\n- Relevant experience: 40 points\n- Skills match: 30 points\n- Education: 15 points\n- Career progression: 15 points"
+            },
+            {
+              "type": "user",
+              "content": "=Resume Text:\n\n{{ $json.data }}\n\nJob Requirements: Looking for a Software Developer with 3+ years experience in Python, JavaScript, and cloud technologies."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "a1b2c3d4-3333-3333-3333-333333333333",
+      "name": "AI Resume Analysis",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [680, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "your-openai-credential-id",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response\nconst aiResponse = $input.first().json.message.content;\n\nlet parsedData;\ntry {\n  // Try to parse JSON from response\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsedData = JSON.parse(jsonMatch[0]);\n  } else {\n    parsedData = JSON.parse(aiResponse);\n  }\n} catch (e) {\n  parsedData = {\n    candidateName: 'Parse Error',\n    email: '',\n    phone: '',\n    totalExperience: '',\n    skills: [],\n    education: '',\n    currentCompany: '',\n    currentRole: '',\n    score: 0,\n    summary: 'Could not parse resume',\n    error: e.message\n  };\n}\n\nreturn [{\n  json: {\n    ...parsedData,\n    processedAt: new Date().toISOString(),\n    status: 'Screened'\n  }\n}];"
+      },
+      "id": "a1b2c3d4-4444-4444-4444-444444444444",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Candidates"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.candidateName }}",
+            "Email": "={{ $json.email }}",
+            "Phone": "={{ $json.phone }}",
+            "Experience": "={{ $json.totalExperience }}",
+            "Skills": "={{ $json.skills.join(', ') }}",
+            "Education": "={{ $json.education }}",
+            "Current Company": "={{ $json.currentCompany }}",
+            "Current Role": "={{ $json.currentRole }}",
+            "Score": "={{ $json.score }}",
+            "Summary": "={{ $json.summary }}",
+            "Status": "={{ $json.status }}",
+            "Processed Date": "={{ $json.processedAt }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-5555-5555-5555-555555555555",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1120, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-6666-6666-6666-666666666666",
+      "name": "Score Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#hiring",
+        "text": "=🎯 *New High-Potential Candidate!*\n\n*Name:* {{ $json.candidateName }}\n*Score:* {{ $json.score }}/100\n*Experience:* {{ $json.totalExperience }}\n*Current Role:* {{ $json.currentRole }} at {{ $json.currentCompany }}\n*Skills:* {{ $json.skills.join(', ') }}\n\n*Summary:* {{ $json.summary }}\n\n_Processed at {{ $json.processedAt }}_",
+        "otherOptions": {}
+      },
+      "id": "a1b2c3d4-7777-7777-7777-777777777777",
+      "name": "Notify HR on Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1560, 200],
+      "credentials": {
+        "slackApi": {
+          "id": "your-slack-credential-id",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, candidate: $json.candidateName, score: $json.score, message: 'Resume processed successfully' }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-8888-8888-8888-888888888888",
+      "name": "Return Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 400]
+    }
+  ],
+  "connections": {
+    "Resume Upload Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          {
+            "node": "AI Resume Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Resume Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Score Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Check": {
+      "main": [
+        [
+          {
+            "node": "Notify HR on Slack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify HR on Slack": {
+      "main": [
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "versionId": "1"
+}

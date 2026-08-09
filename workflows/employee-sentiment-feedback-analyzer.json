@@ -1,0 +1,386 @@
+{
+  "name": "Employee Sentiment Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3g4-1111-1111-1111-111111111111",
+      "name": "Weekly Survey Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Employees"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Active"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d1e2f3g4-2222-2222-2222-222222222222",
+      "name": "Get Active Employees",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [460, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d1e2f3g4-3333-3333-3333-333333333333",
+      "name": "Loop Employees",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Quick Check-in: How are you doing this week? 💭",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }\n    .emoji-btn { font-size: 48px; text-decoration: none; margin: 10px; display: inline-block; }\n    .question { font-size: 18px; margin: 20px 0; }\n  </style>\n</head>\n<body>\n  <h2>Hi {{ $json.FirstName }}! 👋</h2>\n  <p class=\"question\">How are you feeling about work this week?</p>\n  \n  <a href=\"YOUR_APP_URL/feedback?emp={{ $json.EmployeeID }}&mood=great\" class=\"emoji-btn\">😊</a>\n  <a href=\"YOUR_APP_URL/feedback?emp={{ $json.EmployeeID }}&mood=good\" class=\"emoji-btn\">🙂</a>\n  <a href=\"YOUR_APP_URL/feedback?emp={{ $json.EmployeeID }}&mood=okay\" class=\"emoji-btn\">😐</a>\n  <a href=\"YOUR_APP_URL/feedback?emp={{ $json.EmployeeID }}&mood=stressed\" class=\"emoji-btn\">😓</a>\n  <a href=\"YOUR_APP_URL/feedback?emp={{ $json.EmployeeID }}&mood=struggling\" class=\"emoji-btn\">😔</a>\n  \n  <p><small>Your response is confidential.</small></p>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "d1e2f3g4-4444-4444-4444-444444444444",
+      "name": "Send Pulse Survey",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [900, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your-gmail-credential-id",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "feedback-submit",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d1e2f3g4-5555-5555-5555-555555555555",
+      "name": "Feedback Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 500],
+      "webhookId": "feedback-webhook-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Map mood to sentiment score\nconst moodScores = {\n  'great': 1.0,\n  'good': 0.5,\n  'okay': 0,\n  'stressed': -0.5,\n  'struggling': -1.0\n};\n\nconst input = $input.first().json.body || $input.first().json.query;\nconst mood = input.mood || 'okay';\nconst comments = input.comments || '';\n\nreturn [{\n  json: {\n    employeeId: input.emp || input.employeeId,\n    mood: mood,\n    sentimentScore: moodScores[mood] || 0,\n    comments: comments,\n    submittedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "d1e2f3g4-6666-6666-6666-666666666666",
+      "name": "Process Feedback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "type": "system",
+              "content": "Analyze this employee feedback and provide insights in JSON format:\n\n{\n  \"sentimentAnalysis\": \"Detailed analysis of sentiment\",\n  \"keyThemes\": [\"theme1\", \"theme2\"],\n  \"urgencyLevel\": \"low/medium/high\",\n  \"attritionRisk\": \"low/medium/high\",\n  \"suggestedActions\": [\"action1\", \"action2\"],\n  \"needsFollowUp\": true/false\n}"
+            },
+            {
+              "type": "user",
+              "content": "=Mood Rating: {{ $json.mood }}\nSentiment Score: {{ $json.sentimentScore }}\nComments: {{ $json.comments || 'No additional comments' }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "d1e2f3g4-7777-7777-7777-777777777777",
+      "name": "AI Sentiment Analysis",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [680, 500],
+      "credentials": {
+        "openAiApi": {
+          "id": "your-openai-credential-id",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and merge with original data\nconst original = $('Process Feedback').first().json;\nconst aiResponse = $input.first().json.message.content;\n\nlet analysis;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  analysis = JSON.parse(jsonMatch ? jsonMatch[0] : aiResponse);\n} catch (e) {\n  analysis = {\n    sentimentAnalysis: 'Could not analyze',\n    keyThemes: [],\n    urgencyLevel: original.sentimentScore < -0.5 ? 'high' : 'low',\n    attritionRisk: original.sentimentScore < -0.5 ? 'high' : 'low',\n    suggestedActions: ['Manual review required'],\n    needsFollowUp: original.sentimentScore < 0\n  };\n}\n\nreturn [{\n  json: {\n    ...original,\n    ...analysis,\n    feedbackId: 'FB' + Date.now()\n  }\n}];"
+      },
+      "id": "d1e2f3g4-8888-8888-8888-888888888888",
+      "name": "Merge Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "EmployeeFeedback"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "FeedbackID": "={{ $json.feedbackId }}",
+            "EmployeeID": "={{ $json.employeeId }}",
+            "Mood": "={{ $json.mood }}",
+            "SentimentScore": "={{ $json.sentimentScore }}",
+            "Comments": "={{ $json.comments }}",
+            "KeyThemes": "={{ $json.keyThemes.join(', ') }}",
+            "UrgencyLevel": "={{ $json.urgencyLevel }}",
+            "AttritionRisk": "={{ $json.attritionRisk }}",
+            "NeedsFollowUp": "={{ $json.needsFollowUp }}",
+            "SubmittedAt": "={{ $json.submittedAt }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "d1e2f3g4-9999-9999-9999-999999999999",
+      "name": "Save Feedback",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1120, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "urgent-check",
+              "leftValue": "={{ $json.urgencyLevel }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d1e2f3g4-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "name": "Is Urgent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 500]
+    },
+    {
+      "parameters": {
+        "channel": "#hr-alerts",
+        "text": "=🚨 *URGENT: Employee Needs Immediate Attention*\n\n*Employee ID:* {{ $json.employeeId }}\n*Mood:* {{ $json.mood }}\n*Sentiment Score:* {{ $json.sentimentScore }}\n*Attrition Risk:* {{ $json.attritionRisk }}\n\n*Key Concerns:*\n{{ $json.keyThemes.join('\\n• ') }}\n\n*Comments:*\n{{ $json.comments || 'No comments provided' }}\n\n*Suggested Actions:*\n{{ $json.suggestedActions.join('\\n• ') }}\n\n_Immediate follow-up recommended!_",
+        "otherOptions": {}
+      },
+      "id": "d1e2f3g4-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "name": "Alert HR Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1560, 400],
+      "credentials": {
+        "slackApi": {
+          "id": "your-slack-credential-id",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=Thank you for your feedback! 🙏 Your response has been recorded.",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "d1e2f3g4-cccc-cccc-cccc-cccccccccccc",
+      "name": "Thank You Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 600]
+    }
+  ],
+  "connections": {
+    "Weekly Survey Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Active Employees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Employees": {
+      "main": [
+        [
+          {
+            "node": "Loop Employees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Employees": {
+      "main": [
+        [
+          {
+            "node": "Send Pulse Survey",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Feedback": {
+      "main": [
+        [
+          {
+            "node": "AI Sentiment Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Merge Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Analysis": {
+      "main": [
+        [
+          {
+            "node": "Save Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Feedback": {
+      "main": [
+        [
+          {
+            "node": "Is Urgent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Urgent?": {
+      "main": [
+        [
+          {
+            "node": "Alert HR Team",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Thank You Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert HR Team": {
+      "main": [
+        [
+          {
+            "node": "Thank You Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "versionId": "1"
+}

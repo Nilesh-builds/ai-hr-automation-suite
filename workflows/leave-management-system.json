@@ -1,0 +1,455 @@
+{
+  "name": "Leave Management Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leave-request",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c1d2e3f4-1111-1111-1111-111111111111",
+      "name": "Leave Request Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "leave-webhook-id"
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "type": "system",
+              "content": "You are an HR assistant that extracts leave request information. Extract the following details from the user's message and return ONLY valid JSON:\n\n{\n  \"employeeId\": \"EMP001 or extracted ID\",\n  \"employeeName\": \"Name if mentioned\",\n  \"leaveType\": \"casual/sick/earned/unpaid\",\n  \"startDate\": \"YYYY-MM-DD\",\n  \"endDate\": \"YYYY-MM-DD\",\n  \"totalDays\": number,\n  \"reason\": \"Reason for leave\",\n  \"isValid\": true/false,\n  \"validationMessage\": \"Any issues with the request\"\n}\n\nIf dates are mentioned as 'tomorrow', 'next Monday', etc., convert them to actual dates based on today's date."
+            },
+            {
+              "type": "user",
+              "content": "={{ $json.body.message }}\n\nEmployee ID: {{ $json.body.employeeId }}\nToday's Date: {{ $now.format('YYYY-MM-DD') }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "c1d2e3f4-2222-2222-2222-222222222222",
+      "name": "Parse Leave Request",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [460, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "your-openai-credential-id",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response\nconst aiResponse = $input.first().json.message.content;\nlet leaveData;\n\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    leaveData = JSON.parse(jsonMatch[0]);\n  } else {\n    leaveData = JSON.parse(aiResponse);\n  }\n} catch (e) {\n  leaveData = {\n    isValid: false,\n    validationMessage: 'Could not parse leave request. Please provide dates and leave type clearly.',\n    error: e.message\n  };\n}\n\n// Generate request ID\nleaveData.requestId = 'LV' + Date.now();\nleaveData.requestedAt = new Date().toISOString();\nleaveData.status = 'Pending';\n\nreturn [{ json: leaveData }];"
+      },
+      "id": "c1d2e3f4-3333-3333-3333-333333333333",
+      "name": "Process Leave Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "valid-check",
+              "leftValue": "={{ $json.isValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1d2e3f4-4444-4444-4444-444444444444",
+      "name": "Is Valid Request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "LeaveBalances"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "EmployeeID",
+              "lookupValue": "={{ $json.employeeId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1d2e3f4-5555-5555-5555-555555555555",
+      "name": "Get Leave Balance",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1120, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if employee has sufficient balance\nconst request = $('Process Leave Data').first().json;\nconst balanceData = $input.first().json;\n\nconst leaveType = request.leaveType.toLowerCase();\nconst requestedDays = request.totalDays;\n\n// Map leave types to balance columns\nconst balanceMap = {\n  'casual': 'CasualBalance',\n  'sick': 'SickBalance',\n  'earned': 'EarnedBalance',\n  'unpaid': 999 // Unlimited\n};\n\nconst balanceColumn = balanceMap[leaveType] || 'CasualBalance';\nconst availableBalance = leaveType === 'unpaid' ? 999 : (parseInt(balanceData[balanceColumn]) || 0);\n\nconst hasSufficientBalance = requestedDays <= availableBalance;\nconst requiresManagerApproval = requestedDays > 2 || leaveType === 'earned';\n\nreturn [{\n  json: {\n    ...request,\n    employeeName: balanceData.EmployeeName,\n    employeeEmail: balanceData.Email,\n    managerEmail: balanceData.ManagerEmail,\n    managerName: balanceData.ManagerName,\n    availableBalance,\n    hasSufficientBalance,\n    requiresManagerApproval,\n    canAutoApprove: hasSufficientBalance && !requiresManagerApproval\n  }\n}];"
+      },
+      "id": "c1d2e3f4-6666-6666-6666-666666666666",
+      "name": "Validate Balance",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "balance-check",
+              "leftValue": "={{ $json.hasSufficientBalance }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1d2e3f4-7777-7777-7777-777777777777",
+      "name": "Has Balance?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "auto-approve-check",
+              "leftValue": "={{ $json.canAutoApprove }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1d2e3f4-8888-8888-8888-888888888888",
+      "name": "Can Auto Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1780, 100]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "LeaveRecords"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "RequestID": "={{ $json.requestId }}",
+            "EmployeeID": "={{ $json.employeeId }}",
+            "EmployeeName": "={{ $json.employeeName }}",
+            "LeaveType": "={{ $json.leaveType }}",
+            "StartDate": "={{ $json.startDate }}",
+            "EndDate": "={{ $json.endDate }}",
+            "TotalDays": "={{ $json.totalDays }}",
+            "Reason": "={{ $json.reason }}",
+            "Status": "Auto-Approved",
+            "RequestedAt": "={{ $json.requestedAt }}",
+            "ApprovedAt": "={{ $now.format('YYYY-MM-DD HH:mm') }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "c1d2e3f4-9999-9999-9999-999999999999",
+      "name": "Save Auto-Approved Leave",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [2000, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.managerEmail }}",
+        "subject": "=Leave Approval Required: {{ $json.employeeName }}",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; }\n    .card { border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin: 20px; }\n    .button { padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 5px; display: inline-block; }\n    .approve { background: #28a745; color: white; }\n    .reject { background: #dc3545; color: white; }\n  </style>\n</head>\n<body>\n  <div class=\"card\">\n    <h2>Leave Approval Request</h2>\n    <p><strong>Employee:</strong> {{ $json.employeeName }}</p>\n    <p><strong>Type:</strong> {{ $json.leaveType }}</p>\n    <p><strong>From:</strong> {{ $json.startDate }}</p>\n    <p><strong>To:</strong> {{ $json.endDate }}</p>\n    <p><strong>Days:</strong> {{ $json.totalDays }}</p>\n    <p><strong>Reason:</strong> {{ $json.reason }}</p>\n    <p><strong>Available Balance:</strong> {{ $json.availableBalance }} days</p>\n    \n    <br>\n    <a href=\"YOUR_APP_URL/approve/{{ $json.requestId }}\" class=\"button approve\">✅ Approve</a>\n    <a href=\"YOUR_APP_URL/reject/{{ $json.requestId }}\" class=\"button reject\">❌ Reject</a>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "c1d2e3f4-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "name": "Send to Manager",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2000, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your-gmail-credential-id",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, requestId: $json.requestId, status: 'Auto-Approved', message: 'Your leave has been automatically approved!' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "c1d2e3f4-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "name": "Response - Approved",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2220, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, requestId: $json.requestId, status: 'Pending Manager Approval', message: 'Your leave request has been sent to your manager for approval.' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "c1d2e3f4-cccc-cccc-cccc-cccccccccccc",
+      "name": "Response - Pending",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2220, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, message: 'Insufficient leave balance. You have ' + $json.availableBalance + ' days available but requested ' + $json.totalDays + ' days.' }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "c1d2e3f4-dddd-dddd-dddd-dddddddddddd",
+      "name": "Response - No Balance",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, message: $json.validationMessage || 'Invalid leave request. Please provide leave type, start date, and end date.' }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "c1d2e3f4-eeee-eeee-eeee-eeeeeeeeeeee",
+      "name": "Response - Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 400]
+    }
+  ],
+  "connections": {
+    "Leave Request Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Leave Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Leave Request": {
+      "main": [
+        [
+          {
+            "node": "Process Leave Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Leave Data": {
+      "main": [
+        [
+          {
+            "node": "Is Valid Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid Request?": {
+      "main": [
+        [
+          {
+            "node": "Get Leave Balance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Leave Balance": {
+      "main": [
+        [
+          {
+            "node": "Validate Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Balance": {
+      "main": [
+        [
+          {
+            "node": "Has Balance?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Balance?": {
+      "main": [
+        [
+          {
+            "node": "Can Auto Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - No Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Auto Approve?": {
+      "main": [
+        [
+          {
+            "node": "Save Auto-Approved Leave",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Auto-Approved Leave": {
+      "main": [
+        [
+          {
+            "node": "Response - Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Manager": {
+      "main": [
+        [
+          {
+            "node": "Response - Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "versionId": "1"
+}

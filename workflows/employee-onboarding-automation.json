@@ -1,0 +1,343 @@
+{
+  "name": "Employee Onboarding Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "b1c2d3e4-1111-1111-1111-111111111111",
+      "name": "Check Every 2 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "NewHires"
+        },
+        "options": {}
+      },
+      "id": "b1c2d3e4-2222-2222-2222-222222222222",
+      "name": "Get New Hires",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter employees with pending onboarding tasks\nconst employees = $input.all();\nconst today = new Date();\n\nconst pendingOnboardings = employees.filter(emp => {\n  const status = emp.json.OnboardingStatus;\n  return status === 'Pending' || status === 'In Progress';\n}).map(emp => {\n  const joiningDate = new Date(emp.json.JoiningDate);\n  const daysUntilJoining = Math.ceil((joiningDate - today) / (1000 * 60 * 60 * 24));\n  \n  // Determine which tasks to trigger\n  const tasks = [];\n  \n  // 7 days before - Welcome email\n  if (daysUntilJoining <= 7 && daysUntilJoining > 3 && !emp.json.WelcomeEmailSent) {\n    tasks.push('send_welcome_email');\n  }\n  \n  // 3 days before - IT setup\n  if (daysUntilJoining <= 3 && daysUntilJoining > 0 && !emp.json.ITSetupRequested) {\n    tasks.push('request_it_setup');\n  }\n  \n  // 1 day before - Final reminder\n  if (daysUntilJoining === 1 && !emp.json.FinalReminderSent) {\n    tasks.push('send_final_reminder');\n  }\n  \n  // Joining day\n  if (daysUntilJoining <= 0 && !emp.json.Day1Completed) {\n    tasks.push('send_day1_checklist');\n    tasks.push('schedule_orientation');\n  }\n  \n  return {\n    json: {\n      ...emp.json,\n      daysUntilJoining,\n      pendingTasks: tasks,\n      hasTasks: tasks.length > 0\n    }\n  };\n}).filter(emp => emp.json.hasTasks);\n\nreturn pendingOnboardings;"
+      },
+      "id": "b1c2d3e4-3333-3333-3333-333333333333",
+      "name": "Calculate Pending Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "b1c2d3e4-4444-4444-4444-444444444444",
+      "name": "Loop Each Employee",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-welcome",
+              "leftValue": "={{ $json.pendingTasks.includes('send_welcome_email') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1c2d3e4-5555-5555-5555-555555555555",
+      "name": "Need Welcome Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "=Welcome to the Team, {{ $json.FirstName }}! 🎉",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }\n    .content { padding: 30px; }\n    .checklist { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; }\n    .checklist li { margin: 10px 0; }\n    .button { background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>Welcome Aboard! 🚀</h1>\n  </div>\n  <div class=\"content\">\n    <h2>Hi {{ $json.FirstName }},</h2>\n    <p>We're absolutely thrilled to have you join our team on <strong>{{ $json.JoiningDate }}</strong>!</p>\n    \n    <div class=\"checklist\">\n      <h3>📋 Before Your First Day:</h3>\n      <ul>\n        <li>📄 Complete your documentation</li>\n        <li>📷 Send a professional photo for your ID card</li>\n        <li>🏦 Share bank details for payroll setup</li>\n        <li>📱 Download our company app</li>\n      </ul>\n    </div>\n    \n    <div class=\"checklist\">\n      <h3>📍 What to Expect on Day 1:</h3>\n      <ul>\n        <li>🕙 Report at 10:00 AM</li>\n        <li>👥 Meet your buddy and team</li>\n        <li>💻 Collect your laptop and access cards</li>\n        <li>🍽️ Team lunch!</li>\n      </ul>\n    </div>\n    \n    <p>Your manager <strong>{{ $json.ManagerName }}</strong> is excited to welcome you!</p>\n    \n    <p>Questions? Just reply to this email or reach out on WhatsApp.</p>\n    \n    <p>Best regards,<br><strong>HR Team</strong></p>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "b1c2d3e4-6666-6666-6666-666666666666",
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1340, 100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your-gmail-credential-id",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-it",
+              "leftValue": "={{ $json.pendingTasks.includes('request_it_setup') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1c2d3e4-7777-7777-7777-777777777777",
+      "name": "Need IT Setup?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "channel": "#it-requests",
+        "text": "=🖥️ *New Employee IT Setup Required*\n\n*Employee:* {{ $json.FirstName }} {{ $json.LastName }}\n*Department:* {{ $json.Department }}\n*Role:* {{ $json.Role }}\n*Joining Date:* {{ $json.JoiningDate }}\n*Days Until Joining:* {{ $json.daysUntilJoining }}\n\n*Setup Required:*\n• Laptop/Desktop\n• Email account: {{ $json.Email }}\n• Software licenses\n• Access cards\n• VPN access\n\n*Manager:* {{ $json.ManagerName }}\n\n_Please complete setup before {{ $json.JoiningDate }}_",
+        "otherOptions": {}
+      },
+      "id": "b1c2d3e4-8888-8888-8888-888888888888",
+      "name": "Send IT Setup Request",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1340, 400],
+      "credentials": {
+        "slackApi": {
+          "id": "your-slack-credential-id",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "NewHires"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "WelcomeEmailSent": "=TRUE",
+            "WelcomeEmailDate": "={{ $now.format('YYYY-MM-DD HH:mm') }}"
+          },
+          "matchingColumns": ["EmployeeID"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "b1c2d3e4-9999-9999-9999-999999999999",
+      "name": "Update Status - Welcome",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1560, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "NewHires"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ITSetupRequested": "=TRUE",
+            "ITSetupDate": "={{ $now.format('YYYY-MM-DD HH:mm') }}"
+          },
+          "matchingColumns": ["EmployeeID"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "b1c2d3e4-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "name": "Update Status - IT",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1560, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Check Every 2 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get New Hires",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get New Hires": {
+      "main": [
+        [
+          {
+            "node": "Calculate Pending Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Pending Tasks": {
+      "main": [
+        [
+          {
+            "node": "Loop Each Employee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Each Employee": {
+      "main": [
+        [
+          {
+            "node": "Need Welcome Email?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Need IT Setup?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Need Welcome Email?": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Update Status - Welcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Need IT Setup?": {
+      "main": [
+        [
+          {
+            "node": "Send IT Setup Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send IT Setup Request": {
+      "main": [
+        [
+          {
+            "node": "Update Status - IT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "versionId": "1"
+}

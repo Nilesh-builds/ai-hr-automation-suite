@@ -1,0 +1,250 @@
+{
+  "name": "HR Policy QA Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "policy-question",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e1f2g3h4-1111-1111-1111-111111111111",
+      "name": "Question Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "policy-qa-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract question from request\nconst input = $input.first().json.body || $input.first().json;\n\nreturn [{\n  json: {\n    question: input.question || input.message,\n    employeeId: input.employeeId || 'anonymous',\n    channel: input.channel || 'web',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "e1f2g3h4-2222-2222-2222-222222222222",
+      "name": "Extract Question",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Policies"
+        },
+        "options": {}
+      },
+      "id": "e1f2g3h4-3333-3333-3333-333333333333",
+      "name": "Get All Policies",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [680, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine policies into context\nconst policies = $input.all();\nconst question = $('Extract Question').first().json;\n\nlet policyContext = 'COMPANY POLICIES:\\n\\n';\n\npolicies.forEach((policy, index) => {\n  policyContext += `=== ${policy.json.PolicyName} ===\\n`;\n  policyContext += `Category: ${policy.json.Category}\\n`;\n  policyContext += `Content: ${policy.json.PolicyContent}\\n`;\n  policyContext += `Last Updated: ${policy.json.LastUpdated}\\n\\n`;\n});\n\nreturn [{\n  json: {\n    ...question,\n    policyContext: policyContext,\n    totalPolicies: policies.length\n  }\n}];"
+      },
+      "id": "e1f2g3h4-4444-4444-4444-444444444444",
+      "name": "Prepare Policy Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "type": "system",
+              "content": "You are an HR Policy Assistant. Your job is to answer employee questions based ONLY on the provided company policies.\n\nRules:\n1. Answer ONLY based on the policy documents provided\n2. If the answer is not in the policies, clearly say: 'I couldn't find this information in our policies. Please contact HR directly.'\n3. Always cite which policy you're referencing\n4. Be friendly, professional, and concise\n5. If a policy has specific procedures, list them clearly\n6. For sensitive topics (termination, harassment, etc.), always recommend speaking with HR\n\nFormat your response as:\n- Direct answer\n- Policy reference\n- Any additional relevant information"
+            },
+            {
+              "type": "user",
+              "content": "={{ $json.policyContext }}\n\n---\n\nEmployee Question: {{ $json.question }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "e1f2g3h4-5555-5555-5555-555555555555",
+      "name": "AI Policy Answer",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [1120, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "your-openai-credential-id",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final response\nconst question = $('Extract Question').first().json;\nconst aiResponse = $input.first().json.message.content;\n\nreturn [{\n  json: {\n    queryId: 'PQ' + Date.now(),\n    question: question.question,\n    answer: aiResponse,\n    employeeId: question.employeeId,\n    channel: question.channel,\n    timestamp: question.timestamp,\n    answeredAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "e1f2g3h4-6666-6666-6666-666666666666",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "PolicyQueries"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "QueryID": "={{ $json.queryId }}",
+            "EmployeeID": "={{ $json.employeeId }}",
+            "Question": "={{ $json.question }}",
+            "Answer": "={{ $json.answer }}",
+            "Channel": "={{ $json.channel }}",
+            "Timestamp": "={{ $json.timestamp }}",
+            "Helpful": "Pending"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "e1f2g3h4-7777-7777-7777-777777777777",
+      "name": "Log Query",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1560, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-google-credential-id",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, queryId: $json.queryId, question: $json.question, answer: $json.answer, disclaimer: 'This is AI-generated guidance based on company policies. For official decisions, please consult HR.' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "e1f2g3h4-8888-8888-8888-888888888888",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1780, 300]
+    }
+  ],
+  "connections": {
+    "Question Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Question": {
+      "main": [
+        [
+          {
+            "node": "Get All Policies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Policies": {
+      "main": [
+        [
+          {
+            "node": "Prepare Policy Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Policy Context": {
+      "main": [
+        [
+          {
+            "node": "AI Policy Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Policy Answer": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Log Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Query": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "versionId": "1"
+}

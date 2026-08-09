@@ -1,0 +1,13 @@
+# Environment / secrets
+.env
+*.env.local
+
+# n8n local runtime files
+.n8n/
+n8n_data/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+*.log

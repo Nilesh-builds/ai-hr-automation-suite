@@ -1,0 +1,114 @@
+{
+  "name": "WhatsApp HR Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse WhatsApp incoming message\nconst body = $input.first().json.body;\nconst message = body.entry[0].changes[0].value.messages[0];\nconst contact = body.entry[0].changes[0].value.contacts[0];\n\nreturn [{\n  json: {\n    phoneNumber: message.from,\n    messageText: message.text?.body || '',\n    messageType: message.type,\n    userName: contact.profile.name,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse-message",
+      "name": "Parse WhatsApp Message",
+      "type": "n8n-nodes-base.code",
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.messageText.toLowerCase()}}",
+              "operation": "contains",
+              "value2": "leave"
+            }
+          ]
+        }
+      },
+      "id": "route-leave",
+      "name": "Leave Query?",
+      "type": "n8n-nodes-base.if",
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an HR assistant chatbot. Help employees with:\n- Leave balance inquiries\n- Leave application process\n- Policy questions\n- Payslip requests\n- General HR queries\n\nBe friendly, professional, and concise. If you cannot help, offer to connect them with HR team."
+            },
+            {
+              "role": "user",
+              "content": "={{$json.messageText}}"
+            }
+          ]
+        }
+      },
+      "id": "ai-response",
+      "name": "Generate AI Response",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v17.0/{{$env.WHATSAPP_PHONE_ID}}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{$('Parse WhatsApp Message').item.json.phoneNumber}}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text",
+              "value": "={\"body\": \"{{$json.message.content}}\"}"
+            }
+          ]
+        }
+      },
+      "id": "send-whatsapp",
+      "name": "Send WhatsApp Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [[{"node": "Parse WhatsApp Message", "type": "main", "index": 0}]]
+    },
+    "Parse WhatsApp Message": {
+      "main": [[{"node": "Leave Query?", "type": "main", "index": 0}]]
+    },
+    "Leave Query?": {
+      "main": [
+        [{"node": "Generate AI Response", "type": "main", "index": 0}],
+        [{"node": "Generate AI Response", "type": "main", "index": 0}]
+      ]
+    },
+    "Generate AI Response": {
+      "main": [[{"node": "Send WhatsApp Reply", "type": "main", "index": 0}]]
+    }
+  }
+}
