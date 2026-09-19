@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aihr"
+version = "2.0.0"
+description = "Advanced AI-powered HR automation suite — core logic, evaluation harness, and analytics dashboard"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Nilesh Singh" }]
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "python-dotenv>=1.0",
+    "openai>=1.30",
+]
+
+[project.optional-dependencies]
+dashboard = ["streamlit>=1.32", "plotly>=5.20"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+]
+test = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+aihr-eval = "aihr.eval.runner:main"
+
+[tool.setuptools.packages.find]
+include = ["aihr*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

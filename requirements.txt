@@ -1,0 +1,12 @@
+pandas>=2.0
+numpy>=1.24
+python-dotenv>=1.0
+openai>=1.30
+
+# dashboard
+streamlit>=1.32
+plotly>=5.20
+
+# dev / test
+pytest>=8.0
+pytest-cov>=4.1
