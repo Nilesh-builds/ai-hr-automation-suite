@@ -2,6 +2,22 @@
 .env
 *.env.local
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Data / runtime outputs
+data/db/*.db
+data/reports/*.json
+*.sqlite
+*.sqlite3
+
 # n8n local runtime files
 .n8n/
 n8n_data/
@@ -10,4 +26,5 @@ n8n_data/
 .DS_Store
 Thumbs.db
 .vscode/
+.idea/
 *.log
