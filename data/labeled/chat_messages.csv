@@ -1,0 +1,15 @@
+message_id,message,gold_intent
+M-01,What is my leave balance,leave_balance
+M-02,Can you tell me how many annual days I have left,leave_balance
+M-03,Tell me the remote work policy,policy
+M-04,What is the reimbursement rule,policy
+M-05,I need my payslip for last month,payslip
+M-06,Can you send me my salary slip,payslip
+M-07,Hello,greeting
+M-08,Hi there,greeting
+M-09,I want to talk to an HR representative,hr_contact
+M-10,Please connect me with someone from HR,hr_contact
+M-11,Mark my attendance for today,attendance
+M-12,How do I record a late punch,attendance
+M-13,Do we get free snacks on fridays,unknown
+M-14,Which football team does the CEO support,unknown

@@ -1,0 +1,8 @@
+policy_id,title,category,body
+POL-LEAVE-01,Annual Leave Policy,Leave,Employees are entitled to 20 days of annual leave per year. Leave must be requested at least 3 days in advance and approved by the manager.
+POL-LEAVE-02,Sick Leave Policy,Leave,Employees may take up to 8 days of sick leave per year without documentation. More than 3 consecutive days requires a medical certificate.
+POL-LEAVE-03,Casual Leave Policy,Leave,Each employee receives 6 days of casual leave per year for non-planned time off. Casual leave cannot be taken in the first year of probation.
+POL-WORK-01,Remote Work Policy,Work,Staff may work from home up to 2 days per week with manager approval. All remote days must be logged in the attendance system.
+POL-EXP-01,Expense Reimbursement Policy,Finance,Travel and training expenses are reimbursed within 15 working days when a receipt and approval form are submitted within 30 days of the expense.
+POL-FLT-01,Employee Benefits Policy,Benefits,Employees qualify for health insurance after 3 months of employment. Annual performance reviews determine bonus and raise eligibility.
+POL-NOT-01,Resignation Notice Policy,Leave,Employees must give 30 days written notice when resigning. Notice period may be reduced at management's discretion.

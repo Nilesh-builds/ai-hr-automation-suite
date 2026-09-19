@@ -1,0 +1,11 @@
+question_id,question,gold_policy_id,gold_grounded
+Q-01,How many annual leave days do I get each year,POL-LEAVE-01,true
+Q-02,Do I need a medical certificate for 4 days of sick leave,POL-LEAVE-02,true
+Q-03,Can I take casual leave during my probation period,POL-LEAVE-03,true
+Q-04,How many days per week can I work from home,POL-WORK-01,true
+Q-05,When will my travel expense be reimbursed,POL-EXP-01,true
+Q-06,Do I qualify for health insurance after one month,POL-FLT-01,true
+Q-07,How much notice do I need to give when resigning,POL-NOT-01,true
+Q-08,Are bonuses discussed during annual reviews,POL-FLT-01,true
+Q-09,What is the company policy on buying pets,none,false
+Q-10,Is lunch free for employees on tuesdays,none,false

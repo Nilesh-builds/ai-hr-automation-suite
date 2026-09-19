@@ -1,0 +1,13 @@
+text,gold_start_date,gold_end_date,gold_duration_days,gold_type
+"I need 3 days off from 2026-08-12 to 2026-08-14 for personal reasons",2026-08-12,2026-08-14,3,personal
+"Going on sick leave tomorrow",2026-09-20,2026-09-20,1,sick
+"Book annual leave 2026-10-01 to 2026-10-03 for my family trip",2026-10-01,2026-10-03,3,annual
+"Need a casual leave day on 12/08/2026 for a family function",2026-08-12,2026-08-12,1,casual
+"Can I take unpaid leave from 2026-12-20 till 2026-12-24",2026-12-20,2026-12-24,5,unpaid
+"Fever and doctor visit, taking sick leave today",2026-09-19,2026-09-19,1,sick
+"Marriage celebrations from 05/09/2026 to 07/09/2026",2026-09-05,2026-09-07,3,personal
+"2 days annual leave for 2026-11-11 and 2026-11-12",2026-11-11,2026-11-12,2,annual
+"Surgery scheduled, need medical leave tomorrow and a few days after",2026-09-20,2026-09-20,1,sick
+"Weekly outing, casual leave on 20/09/2026",2026-09-20,2026-09-20,1,casual
+"Moving to a new house, personal leave 2026-06-01 to 2026-06-02",2026-06-01,2026-06-02,2,personal
+"Unpaid leave request for next week, 2026-09-21 to 2026-09-25",2026-09-21,2026-09-25,5,unpaid

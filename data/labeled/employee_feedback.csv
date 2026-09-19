@@ -1,0 +1,11 @@
+feedback_id,employee_id,mood,comments,gold_sentiment,gold_urgency,gold_attrition_risk
+FB-01,E1001,great,I love the new project and my manager is very supportive,positive,low,low
+FB-02,E1002,good,Team is helpful and we shipped on time,positive,low,low
+FB-03,E1003,okay,Workload is a bit too much lately,negative,medium,medium
+FB-04,E1004,stressed,Too many deadlines and I feel exhausted,negative,high,high
+FB-05,E1005,struggling,Underpaid and stuck with no growth,negative,high,high
+FB-06,E1006,good,Grateful for the extra benefits this quarter,positive,low,low
+FB-07,E1007,okay,Training sessions helped me learn a lot,positive,low,low
+FB-08,E1008,stressed,Manager is unfair and micromanages everything,negative,high,high
+FB-09,E1009,good,Excellent work-life balance now,positive,low,low
+FB-10,E1010,struggling,Toxic culture and I am thinking about quitting,negative,high,high

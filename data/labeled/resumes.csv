@@ -1,0 +1,9 @@
+candidate_id,name,role,resume_text,gold_min_experience,gold_required_skills,gold_score,gold_verdict
+CA-01,Asha Rao,Data Analyst,5 years experience with python pandas sql and excel for business reporting,2,python;pandas;sql;excel,80,Strong
+CA-02,Ravi Menon,Data Analyst,2 years as analyst using excel pivot tables and dashboards,2,python;pandas;sql;excel,45,Weak
+CA-03,Salma Khan,Data Scientist,7 years machine learning python tensorflow and scikit learn,3,python;machine learning;scikit-learn,85,Strong
+CA-04,Dinesh Patel,ML Engineer,4 years experience with python pytorch and deploying models to aws,3,python;pytorch;aws,82,Strong
+CA-05,Meera Nair,Product Designer,3 years figma prototyping and user research with ui design,2,figma;prototyping;user research,78,Strong
+CA-06,Arjun Das,Backend Engineer,6 months internship using python and basic api development,2,python;fastapi;postgresql,40,Weak
+CA-07,Priya Iyer,Data Analyst,8 years of reporting with python pandas sql and tableau and powerbi,2,python;pandas;sql;tableau,88,Strong
+CA-08,Karan Malhotra,ML Engineer,2.5 years python scikit-learn but no cloud exposure,3,python;scikit-learn;aws,50,Moderate
