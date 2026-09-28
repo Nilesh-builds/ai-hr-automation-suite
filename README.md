@@ -4,7 +4,7 @@
 
 > Rule-based baselines measured on small labeled samples (n=8–14 per task): leave type/duration 100%, date 75%, sentiment 90%, resume verdicts 87.5%, policy answers grounded 90%, chat intent 100%. Synthetic sample data only — no real employee records.
 
-An end-to-end HR automation platform: six n8n workflows **plus a Python-first
+An end-to-end HR automation platform: seven n8n workflows **plus a Python-first
 core engine** with a benchmarked evaluation harness, an SQLite data store, and
 a live analytics dashboard.
 
@@ -17,7 +17,7 @@ metrics — run headless in CI, upgradeable to an LLM path with one env var.
 - **Evaluation harness:** labeled ground truth + strict/soft metrics per task
 - **HR analytics dashboard:** Streamlit app over the SQLite store and eval report
 - **Persistent storage:** SQLite (`HRStore`) replaces raw Google Sheets
-- **n8n kept as reference:** the original six workflows remain importable
+- **n8n kept as reference:** the original seven workflows remain importable
 
 ## Quick start
 
@@ -82,6 +82,12 @@ Evaluation tab renders the latest harness report with a one-click re-run.
 
 ## Demo
 
+![HR dashboard preview](docs/screenshots/hr-dashboard.png)
+
+Rendered output of `workflows/hr-dashboard.json` on tiny sample data
+(3 employees, 2 leaves, 2 feedback responses, 2 candidates) — counts are
+single digits by design, not production volumes.
+
 - **Screen recording:** short walkthrough (dashboard + one n8n import) — to be recorded.
 - **n8n workflow canvases:** screenshots live in `docs/screenshots/` (one per
 workflow, same names as `workflows/*.json`). To capture: open each JSON in n8n
@@ -113,7 +119,7 @@ design decisions.
 
 ## n8n workflows
 
-The six original workflows are kept under `workflows/` and remain importable:
+The seven original workflows are kept under `workflows/` and remain importable:
 
 | Workflow | Trigger | What it does |
 | :-- | :-- | :-- |
@@ -123,6 +129,7 @@ The six original workflows are kept under `workflows/` and remain importable:
 | `ai-policy-qa-bot.json` | Webhook | Answers policy questions strictly from the policy sheet, logs every query. |
 | `ai-resume-screener-ranker.json` | Webhook (resume upload) | Extracts resume text, scores vs role requirements, pings Slack for strong candidates. |
 | `whatsapp-hr-chatbot.json` | Webhook (WhatsApp) | Routes WhatsApp messages to answers for leave balance, policies, payslips. |
+| `hr-dashboard.json` | Webhook + Schedule (weekdays 9am) | Serves a live KPI dashboard HTML from Google Sheets and posts a daily Slack digest. Read-only: writes nothing back. |
 
 Import steps and credential/placeholder swap instructions match the original
 setup. For a Python equivalent of every workflow, see the matching module in
