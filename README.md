@@ -1,5 +1,9 @@
 # AI-Powered HR Automation Suite
 
+[![CI](https://github.com/Nilesh-builds/ai-hr-automation-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/Nilesh-builds/ai-hr-automation-suite/actions/workflows/ci.yml)
+
+> Rule-based baselines measured on small labeled samples (n=8–14 per task): leave type/duration 100%, date 75%, sentiment 90%, resume verdicts 87.5%, policy answers grounded 90%, chat intent 100%. Synthetic sample data only — no real employee records.
+
 An end-to-end HR automation platform: six n8n workflows **plus a Python-first
 core engine** with a benchmarked evaluation harness, an SQLite data store, and
 a live analytics dashboard.
@@ -75,6 +79,16 @@ streamlit run aihr/dashboard/app.py
 Tabs: Overview · Sentiment · Leave · Resume · Policy QA · Evaluation. Charts are
 Plotly, data comes from the SQLite store (auto-seeded on first launch), and the
 Evaluation tab renders the latest harness report with a one-click re-run.
+
+## Demo
+
+- **Screen recording:** short walkthrough (dashboard + one n8n import) — to be recorded.
+- **n8n workflow canvases:** screenshots live in `docs/screenshots/` (one per
+workflow, same names as `workflows/*.json`). To capture: open each JSON in n8n
+(Import from File), arrange the canvas, export as PNG.
+- Until then, every workflow is importable JSON verified by
+`scripts/static_checks.py` (6 files, no secrets), and the Streamlit dashboard
+runs the same logic end to end on synthetic data.
 
 ## Architecture
 
