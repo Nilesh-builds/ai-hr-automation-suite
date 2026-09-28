@@ -1,0 +1,511 @@
+{
+  "name": "HR Dashboard - live KPIs + daily Slack digest",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## HR Dashboard (live)\n**Setup (2 min)**\n1. Open **Config** and paste your Google Sheet ID; set the 4 tab names.\n2. Attach your Google Sheets credential on the 4 *Read* nodes.\n3. Slack node: pick your channel + credential (or delete the Slack branch).\n4. Activate, then open the **Production URL** of the Webhook node.\n\nColumn headers differ? Edit the `COLS` block at the top of the **Aggregate & Render** node.\nNo data is written anywhere - this workflow only reads.",
+        "height": 300,
+        "width": 420,
+        "color": 4
+      },
+      "id": "28e11bd1-1767-4882-9e30-aed5fe9b89d8",
+      "name": "Setup notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -330
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "hr-dashboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ecc90c04-58e6-4705-b01d-964471399254",
+      "name": "Dashboard Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "7a25cea1-6aef-4d6e-b994-38852edc8884"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "dc20b470-101e-4301-a7ce-ae541c8302c3",
+      "name": "Weekday 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5a2a3d4b-7068-4bf7-8ef0-326e561a79e5",
+              "name": "mode",
+              "value": "web",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "73ad3f40-9dec-4c85-a8a1-2e4d93e82851",
+      "name": "Mode: web",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1e50cb45-f4b8-43ba-bd52-db0e515f04b6",
+              "name": "mode",
+              "value": "digest",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4eafdeb3-ac32-437f-a31c-7315f79ea7db",
+      "name": "Mode: digest",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6d26f801-873c-4503-8e7b-b5ca11d5f515",
+              "name": "sheetId",
+              "value": "YOUR_GOOGLE_SHEET_ID",
+              "type": "string"
+            },
+            {
+              "id": "d397fe90-0ac0-4415-bafe-8b6c51fc7c2f",
+              "name": "tabOnboarding",
+              "value": "Onboarding",
+              "type": "string"
+            },
+            {
+              "id": "0de68e69-86da-412e-a9be-bb3767b91e24",
+              "name": "tabLeave",
+              "value": "Leave",
+              "type": "string"
+            },
+            {
+              "id": "731a7d5a-c60a-49a0-b75e-f98fea5543f5",
+              "name": "tabFeedback",
+              "value": "Feedback",
+              "type": "string"
+            },
+            {
+              "id": "9fb53d51-c8f5-4fc5-bb88-d3f333a948d3",
+              "name": "tabCandidates",
+              "value": "Candidates",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "f5ff02b5-3be6-4a4d-9f02-770e3d76b189",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.tabOnboarding }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "099f3e8d-89b0-40cd-ba95-5c0de60b3699",
+      "name": "Read Onboarding",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        720,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.tabLeave }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "a7544343-086b-44bd-b162-8b944e5fb9f8",
+      "name": "Read Leave",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        940,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.tabFeedback }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "05d60c61-da36-468a-aa40-f51d1a24cb7b",
+      "name": "Read Feedback",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1160,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.tabCandidates }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "8635c261-07e8-4bca-8eec-18447d771cb2",
+      "name": "Read Candidates",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1380,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== EDIT HERE if your sheet headers differ (case-insensitive, first match wins) =====\nconst COLS = {\n  onboarding: { name:['name','employee','employee name'], dept:['department','dept'], status:['status','onboarding status'] },\n  leave:      { name:['employee','name','employee name'], type:['leave type','type'], days:['days','no of days','duration'], status:['status','approval status'] },\n  feedback:   { dept:['department','dept'], sentiment:['sentiment','sentiment label'], score:['sentiment score','score'] },\n  candidates: { name:['candidate','candidate name','name'], role:['role','position','job title'], score:['match score','ai score','score'], status:['decision','recommendation','status'] },\n};\n// =========================================================================================\nconst norm = s => String(s ?? '').trim().toLowerCase();\nconst esc = s => String(s ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));\nconst pick = (row, names) => { const keys = Object.keys(row); for (const n of names) { const k = keys.find(k => norm(k) === n); if (k !== undefined && String(row[k] ?? '').trim() !== '') return row[k]; } return ''; };\nconst warnings = [];\nfunction rows(nodeName, label) {\n  const out = [];\n  let items = [];\n  try { items = $(nodeName).all(); } catch (e) { warnings.push(`Could not read \"${label}\" tab`); return out; }\n  for (const it of items) {\n    const j = it.json || {};\n    if (j.error) { warnings.push(`Could not read \"${label}\" tab`); continue; }\n    if (Object.values(j).some(v => String(v ?? '').trim() !== '')) out.push(j);\n  }\n  return out;\n}\nconst pct = (a, b) => b ? Math.round((a / b) * 100) : 0;\nconst num = v => { const n = parseFloat(String(v).replace(/[^0-9.\\-]/g, '')); return isNaN(n) ? 0 : n; };\n\nconst ob = rows('Read Onboarding', 'Onboarding');\nconst lv = rows('Read Leave', 'Leave');\nconst fb = rows('Read Feedback', 'Feedback');\nconst cd = rows('Read Candidates', 'Candidates');\n\n// Onboarding\nconst obCount = { completed: 0, progress: 0, pending: 0 };\nfor (const r of ob) { const s = norm(pick(r, COLS.onboarding.status)); if (s.includes('complete') || s.includes('done')) obCount.completed++; else if (s.includes('progress') || s.includes('ongoing') || s.includes('started')) obCount.progress++; else obCount.pending++; }\n// Leave\nconst lvCount = { approved: 0, pending: 0, rejected: 0 }; let approvedDays = 0; const pendingList = [];\nfor (const r of lv) {\n  const s = norm(pick(r, COLS.leave.status)); const d = num(pick(r, COLS.leave.days));\n  if (s.includes('approv')) { lvCount.approved++; approvedDays += d; }\n  else if (s.includes('reject') || s.includes('declin') || s.includes('deny')) lvCount.rejected++;\n  else { lvCount.pending++; pendingList.push({ name: pick(r, COLS.leave.name), type: pick(r, COLS.leave.type), days: d }); }\n}\n// Feedback\nconst fbCount = { positive: 0, neutral: 0, negative: 0 }; const negByDept = {}; let scoreSum = 0, scoreN = 0;\nfor (const r of fb) {\n  const s = norm(pick(r, COLS.feedback.sentiment));\n  if (s.startsWith('pos')) fbCount.positive++;\n  else if (s.startsWith('neg')) { fbCount.negative++; const d = pick(r, COLS.feedback.dept) || 'Unassigned'; negByDept[d] = (negByDept[d] || 0) + 1; }\n  else fbCount.neutral++;\n  const sc = pick(r, COLS.feedback.score); if (sc !== '') { scoreSum += num(sc); scoreN++; }\n}\nconst topNegDepts = Object.entries(negByDept).sort((a, b) => b[1] - a[1]).slice(0, 3);\n// Candidates\nconst cdCount = { shortlisted: 0, review: 0, rejected: 0 }; let cScore = 0, cN = 0;\nconst ranked = cd.map(r => ({ name: pick(r, COLS.candidates.name), role: pick(r, COLS.candidates.role), score: num(pick(r, COLS.candidates.score)), status: norm(pick(r, COLS.candidates.status)) }));\nfor (const c of ranked) {\n  if (c.status.includes('short') || c.status.includes('select') || c.status.includes('accept') || c.status.includes('hire')) cdCount.shortlisted++;\n  else if (c.status.includes('reject')) cdCount.rejected++;\n  else cdCount.review++;\n  if (c.score) { cScore += c.score; cN++; }\n}\nconst topCands = [...ranked].sort((a, b) => b.score - a.score).slice(0, 5);\n\nconst now = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });\nconst mode = $('Config').first().json.mode;\n\n// ---------- HTML (no JavaScript: n8n sandboxes scripts in webhook HTML) ----------\nconst bar = (label, v, total, cls) => `<div class=\"row\"><span class=\"lab\">${esc(label)}</span><span class=\"track\"><i class=\"${cls}\" style=\"width:${pct(v, total)}%\"></i></span><span class=\"val\">${v}</span></div>`;\nconst kpi = (n, l, sub) => `<div class=\"kpi\"><div class=\"n\">${esc(n)}</div><div class=\"l\">${esc(l)}</div><div class=\"s\">${esc(sub)}</div></div>`;\nconst obTotal = ob.length, lvTotal = lv.length, fbTotal = fb.length, cdTotal = cd.length;\nconst html = `<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>HR Automation Dashboard</title><style>\n:root{--bg:#0D1310;--panel:#121814;--line:#213028;--text:#DCE6DE;--muted:#75897E;--accent:#C8FF4D;--warn:#E3C25A;--bad:#E36B5A}\n*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:28px 20px}\n.wrap{max-width:1040px;margin:0 auto}h1{font-size:1.5rem;margin:0 0 4px}.sub{color:var(--muted);font-size:12px;margin-bottom:22px}\n.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}\n.kpi{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}.kpi .n{font-size:1.9rem;font-weight:700;color:var(--accent)}.kpi .l{font-size:12px;margin-top:2px}.kpi .s{font-size:11px;color:var(--muted);margin-top:6px}\n.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}\n.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px}.card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;font-weight:500}\n.row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px}.lab{width:96px;color:var(--muted);flex-shrink:0}.track{flex:1;height:9px;background:var(--line);border-radius:2px;overflow:hidden}.track i{display:block;height:100%;background:var(--accent)}.track i.w{background:var(--warn)}.track i.b{background:var(--bad)}.val{width:34px;text-align:right}\ntable{width:100%;border-collapse:collapse;font-size:12px}td,th{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500}.empty{color:var(--muted);font-size:12px}\n.warn{background:#2a2312;border:1px solid var(--warn);color:var(--warn);padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:14px}\n</style></head><body><div class=\"wrap\">\n<h1>HR Automation Dashboard</h1><div class=\"sub\">Live from Google Sheets · updated ${esc(now)} IST</div>\n${warnings.length ? `<div class=\"warn\">${[...new Set(warnings)].map(esc).join('<br>')} — check the tab names in the Config node.</div>` : ''}\n<div class=\"kpis\">\n${kpi(pct(obCount.completed, obTotal) + '%', 'Onboarding complete', `${obCount.completed} of ${obTotal} employees`)}\n${kpi(lvCount.pending, 'Leave requests pending', `${lvCount.approved} approved · ${approvedDays} days`)}\n${kpi(pct(fbCount.positive, fbTotal) + '%', 'Positive feedback', `${fbTotal} responses${scoreN ? ' · avg score ' + (scoreSum / scoreN).toFixed(2) : ''}`)}\n${kpi(cdCount.shortlisted, 'Candidates shortlisted', `${cdTotal} screened${cN ? ' · avg match ' + Math.round(cScore / cN) : ''}`)}\n</div><div class=\"grid\">\n<div class=\"card\"><h2>Onboarding</h2>${obTotal ? bar('Completed', obCount.completed, obTotal, '') + bar('In progress', obCount.progress, obTotal, 'w') + bar('Pending', obCount.pending, obTotal, 'b') : '<div class=\"empty\">No onboarding records yet.</div>'}</div>\n<div class=\"card\"><h2>Leave requests</h2>${lvTotal ? bar('Approved', lvCount.approved, lvTotal, '') + bar('Pending', lvCount.pending, lvTotal, 'w') + bar('Rejected', lvCount.rejected, lvTotal, 'b') : '<div class=\"empty\">No leave requests yet.</div>'}</div>\n<div class=\"card\"><h2>Employee sentiment</h2>${fbTotal ? bar('Positive', fbCount.positive, fbTotal, '') + bar('Neutral', fbCount.neutral, fbTotal, 'w') + bar('Negative', fbCount.negative, fbTotal, 'b') + (topNegDepts.length ? `<div class=\"sub\" style=\"margin:12px 0 0\">Most negative: ${topNegDepts.map(([d, n]) => esc(d) + ' (' + n + ')').join(', ')}</div>` : '') : '<div class=\"empty\">No feedback yet.</div>'}</div>\n<div class=\"card\"><h2>Resume screening</h2>${cdTotal ? bar('Shortlisted', cdCount.shortlisted, cdTotal, '') + bar('In review', cdCount.review, cdTotal, 'w') + bar('Rejected', cdCount.rejected, cdTotal, 'b') : '<div class=\"empty\">No candidates yet.</div>'}</div>\n<div class=\"card\"><h2>Pending leave approvals</h2>${pendingList.length ? '<table><tr><th>Employee</th><th>Type</th><th>Days</th></tr>' + pendingList.slice(0, 6).map(p => `<tr><td>${esc(p.name)}</td><td>${esc(p.type)}</td><td>${p.days || ''}</td></tr>`).join('') + '</table>' : '<div class=\"empty\">Nothing waiting.</div>'}</div>\n<div class=\"card\"><h2>Top candidates</h2>${topCands.length ? '<table><tr><th>Name</th><th>Role</th><th>Score</th></tr>' + topCands.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.role)}</td><td>${c.score || ''}</td></tr>`).join('') + '</table>' : '<div class=\"empty\">No scored candidates yet.</div>'}</div>\n</div></div></body></html>`;\n\nconst digest = `*HR daily digest — ${now}*\\n• Onboarding: ${obCount.completed}/${obTotal} complete (${pct(obCount.completed, obTotal)}%)\\n• Leave: ${lvCount.pending} pending approval, ${lvCount.approved} approved\\n• Feedback: ${pct(fbCount.positive, fbTotal)}% positive, ${fbCount.negative} negative\\n• Hiring: ${cdCount.shortlisted} shortlisted of ${cdTotal} screened` + (warnings.length ? `\\n⚠️ ${[...new Set(warnings)].join('; ')}` : '');\n\nreturn [{ json: { mode, html, digest } }];\n"
+      },
+      "id": "aa413155-9d38-402e-8b81-13cdcf1b39e4",
+      "name": "Aggregate & Render",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6eaf62f1-9c9f-4d13-a97a-7fca98417287",
+              "leftValue": "={{ $json.mode }}",
+              "rightValue": "web",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "450c5a8b-6d64-4efb-8453-13686651d01c",
+      "name": "Web or digest?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1820,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "9b3e1b74-1c1e-4da3-8d9f-697b38218176",
+      "name": "Respond with dashboard",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2060,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "YOUR_SLACK_CHANNEL_ID",
+          "mode": "id"
+        },
+        "text": "={{ $json.digest }}",
+        "otherOptions": {}
+      },
+      "id": "cf401e59-ffe6-4fb8-a525-e98ef5854793",
+      "name": "Post digest to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2060,
+        200
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Dashboard Webhook": {
+      "main": [
+        [
+          {
+            "node": "Mode: web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekday 9am": {
+      "main": [
+        [
+          {
+            "node": "Mode: digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mode: web": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mode: digest": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Read Onboarding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Onboarding": {
+      "main": [
+        [
+          {
+            "node": "Read Leave",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Leave": {
+      "main": [
+        [
+          {
+            "node": "Read Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Feedback": {
+      "main": [
+        [
+          {
+            "node": "Read Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Candidates": {
+      "main": [
+        [
+          {
+            "node": "Aggregate & Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate & Render": {
+      "main": [
+        [
+          {
+            "node": "Web or digest?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web or digest?": {
+      "main": [
+        [
+          {
+            "node": "Respond with dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post digest to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
