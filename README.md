@@ -42,18 +42,24 @@ and a score.
 | Policy Q&A | `policies` + `policy_questions` | retrieval accuracy, grounded accuracy |
 | Chat intent routing | `chat_messages` | intent accuracy, macro-F1 |
 
-Latest rule-baseline report (regenerate with `python -m aihr.eval.runner`):
+Latest rule-baseline report (regenerate with `python -m aihr.eval.runner`).
+Small hand-labeled sample sets — every score below is shown with its n, so
+treat percentages as indicative, not precise:
 
-| Task | Metric | Score |
-| :-- | :-- | :-- |
-| Leave parsing | Date accuracy | 100% |
-| Leave parsing | Duration accuracy | 100% |
-| Leave parsing | Type accuracy | 100% |
-| Sentiment | Sentiment accuracy | 90% |
-| Sentiment | Urgency accuracy | 100% |
-| Resume screening | Verdict accuracy | 87.5% |
-| Policy Q&A | Grounded accuracy | 90% |
-| Chat intent | Intent accuracy | 100% |
+| Task | Metric | Score | n |
+| :-- | :-- | :-- | --: |
+| Leave parsing | Date accuracy | 75% (9/12) | 12 |
+| Leave parsing | Duration accuracy | 100% (12/12) | 12 |
+| Leave parsing | Type accuracy | 100% (12/12) | 12 |
+| Sentiment | Sentiment accuracy | 90% (9/10) | 10 |
+| Sentiment | Urgency accuracy | 100% (10/10) | 10 |
+| Resume screening | Verdict accuracy | 87.5% (7/8) | 8 |
+| Policy Q&A | Grounded accuracy | 90% (9/10) | 10 |
+| Chat intent | Intent accuracy | 100% (14/14) | 14 |
+
+All evaluation and demo data here is synthetic sample data: the seed store uses
+invented employees (`aihr/seed.py`, seed 42) and the harness scores tiny
+hand-labeled CSVs in `data/labeled/`. Nothing was tested on real employee data.
 
 These are intentional, honest baselines: a couple of hard examples remain that
 rules miss but the LLM layer fixes (e.g. "2.5 yrs with no cloud exposure" is
