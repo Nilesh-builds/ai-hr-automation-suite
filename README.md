@@ -88,6 +88,15 @@ Rendered output of `workflows/hr-dashboard.json` on tiny sample data
 (3 employees, 2 leaves, 2 feedback responses, 2 candidates) — counts are
 single digits by design, not production volumes.
 
+Workflow canvases (click to enlarge):
+
+![Employee onboarding automation](docs/screenshots/employee-onboarding-automation.png)
+![AI resume screener](docs/screenshots/ai-resume-screener-ranker.png)
+![HR policy Q&A bot](docs/screenshots/ai-policy-qa-bot.png)
+![WhatsApp HR chatbot](docs/screenshots/whatsapp-hr-chatbot.png)
+
+Still to capture: leave-management-system, employee-sentiment-feedback-analyzer.
+
 - **Screen recording:** short walkthrough (dashboard + one n8n import) — to be recorded.
 - **n8n workflow canvases:** screenshots live in `docs/screenshots/` (one per
 workflow, same names as `workflows/*.json`). To capture: open each JSON in n8n
